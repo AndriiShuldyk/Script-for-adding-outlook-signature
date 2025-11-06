@@ -1,28 +1,9 @@
-﻿<#-----------------------------------------------------------------------------------------------------------
+<#-----------------------------------------------------------------------------------------------------------
 Name           : How to Set Up an Email Signature in Outlook Using PowerShell
-Version        : 2.0
+Version        : 2.1 (Modified)
 Website        : o365reports.com
 
-Script Highlights: 
-~~~~~~~~~~~~~~~~~
-
-1. The script automatically verifies and installs the Exchange PowerShell module (if not installed already) upon your confirmation. 
-2. Provides the option to create text signature. 
-3. Provides the option to create email signatures using HTML templates. 
-4. Provides the option to use default or customized fields and templates. 
-5. Allows to create an email signature for all mailboxes. 
-6. Allows to filter and set up email signatures for user mailboxes alone. 
-7. Allow to set up an email signature for bulk users. 
-8. Exports signature deployment status to a CSV file. 
-9. Supports certificate-based authentication (CBA) too.
-
-For detailed script execution:  https://o365reports.com/2024/06/18/how-to-set-up-an-email-signature-in-outlook-using-powershell/
-
-Change Log:
-
-
-v1.0 (July 3, 2024)- Script created
-V2.0 (Jan 18, 2025)- Error handling added to enabling PostponeRoamingSignatureUntilLater param.
+Modification: Changed to use WindowsEmailAddress instead of UserPrincipalName for email in signatures
 
 ----------------------------------------------------------------------------------------------------------#>
 
@@ -395,9 +376,9 @@ function Deploy-DefaultTextSignature
       {
         $UserTextSignature += "$($UserDetails.DisplayName)<br>"
       }
-      if ($UserDetails.UserPrincipalName -ne "")
+      if ($UserDetails.WindowsEmailAddress -ne "")
       {
-        $UserTextSignature += "$($UserDetails.UserPrincipalName)<br>"
+        $UserTextSignature += "$($UserDetails.WindowsEmailAddress)<br>"
       }
       if ($UserDetails.Title -ne "")
       {
@@ -523,7 +504,7 @@ function Deploy-InbuiltHTMLSignature
     {
       $UserDetails = Get-User -Identity $User.UserPrincipalName -ErrorAction Stop
       $Address = Generate-UserAddress ($UserDetails)
-      $UserHTMLSignature = $DefaultHTML -replace "%%DisplayName%%",$UserDetails.DisplayName -replace "%%Title%%",$UserDetails.Title -replace "%%Email%%",$UserDetails.UserPrincipalName -replace "%%MobilePhone%%",$UserDetails.MobilePhone -replace "%%BusinessPhone%%",$UserDetails.Phone -replace "%%CompanyName%%",$UserDetails.Office -replace "%%Address%%",$Address
+      $UserHTMLSignature = $DefaultHTML -replace "%%DisplayName%%",$UserDetails.DisplayName -replace "%%Title%%",$UserDetails.Title -replace "%%Email%%",$UserDetails.WindowsEmailAddress -replace "%%MobilePhone%%",$UserDetails.MobilePhone -replace "%%BusinessPhone%%",$UserDetails.Phone -replace "%%CompanyName%%",$UserDetails.Office -replace "%%Address%%",$Address
       Set-MailboxMessageConfiguration -Identity $UserDetails.UserPrincipalName -SignatureHTML $UserHTMLSignature -AutoAddSignature $true -AutoAddSignatureOnMobile $true -AutoAddSignatureOnReply $true -ErrorAction Stop
       $DeploymentStatus = "Successful"
     }
@@ -551,7 +532,7 @@ function Deploy-CustomTextSignature
   $TotalCount = ($UsersCollection.UserPrincipalName).Count
   $CurrentTime = Get-Date -Format "yyyyMMdd_HHmmss"
   $SignatureLog_FilePath = Join-Path $PSScriptRoot -ChildPath "$CurrentTime-SignatureDeployment_Details.csv"
-  $UsersFields = @{ '1' = 'DisplayName'; '2' = 'UserPrincipalName'; '3' = 'MobilePhone'; '4' = 'Phone'; '5' = 'Fax'; '6' = 'Department'; '7' = 'Title'; '8' = 'Office'; '9' = 'Address'; '10' = 'StreetAddress'; '11' = 'City'; '12' = 'StateOrProvince'; '13' = 'PostalCode'; '14' = 'CountryOrRegion' }
+  $UsersFields = @{ '1' = 'DisplayName'; '2' = 'WindowsEmailAddress'; '3' = 'MobilePhone'; '4' = 'Phone'; '5' = 'Fax'; '6' = 'Department'; '7' = 'Title'; '8' = 'Office'; '9' = 'Address'; '10' = 'StreetAddress'; '11' = 'City'; '12' = 'StateOrProvince'; '13' = 'PostalCode'; '14' = 'CountryOrRegion' }
   foreach ($User in $UsersCollection)
   {
     try
@@ -638,7 +619,7 @@ function Deploy-CustomHTMLSignature
       if ($AddressUsed) {
         $Address = Generate-UserAddress ($UserDetails)
       }
-      $UserSignature = $HTMLSignature.Replace('%%DisplayName%%',$UserDetails.DisplayName).Replace('%%EmailAddress%%',$UserDetails.UserPrincipalName).Replace('%%MobilePhone%%',$UserDetails.MobilePhone).Replace('%%BussinessPhone%%',$UserDetails.Phone).Replace('%%FaxNumber%%',$UserDetails.Fax).Replace('%%Department%%',$UserDetails.Department).Replace('%%Title%%',$UserDetails.Title).Replace('%%Office%%',$UserDetails.Office).Replace('%%Address%%',$Address).Replace('%%StreetAddress%%',$UserDetails.StreetAddress).Replace('%%City%%',$UserDetails.City).Replace('%%StateOrProvince%%',$UserDetails.StateOrProvince).Replace('%%PostalCode%%',$UserDetails.PostalCode).Replace('%%CountryOrRegion%%',$UserDetails.CountryOrRegion)
+      $UserSignature = $HTMLSignature.Replace('%%DisplayName%%',$UserDetails.DisplayName).Replace('%%EmailAddress%%',$UserDetails.WindowsEmailAddress).Replace('%%MobilePhone%%',$UserDetails.MobilePhone).Replace('%%BussinessPhone%%',$UserDetails.Phone).Replace('%%FaxNumber%%',$UserDetails.Fax).Replace('%%Department%%',$UserDetails.Department).Replace('%%Title%%',$UserDetails.Title).Replace('%%Office%%',$UserDetails.Office).Replace('%%Address%%',$Address).Replace('%%StreetAddress%%',$UserDetails.StreetAddress).Replace('%%City%%',$UserDetails.City).Replace('%%StateOrProvince%%',$UserDetails.StateOrProvince).Replace('%%PostalCode%%',$UserDetails.PostalCode).Replace('%%CountryOrRegion%%',$UserDetails.CountryOrRegion)
       Set-MailboxMessageConfiguration -Identity $UserDetails.UserPrincipalName -SignatureHTML $UserSignature -AutoAddSignature $true -AutoAddSignatureOnMobile $true -AutoAddSignatureOnReply $true -ErrorAction Stop
       $DeploymentStatus = "Successful"
     }
@@ -725,54 +706,3 @@ while ($true)
     continue;
   }
 }
-
-# SIG # Begin signature block
-# MIII1QYJKoZIhvcNAQcCoIIIxjCCCMICAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
-# gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQULpltww3vIdibUWfTeChmEL1V
-# jvygggYoMIIGJDCCBQygAwIBAgITEwAAAOoKFpTrnDcwtAAEAAAA6jANBgkqhkiG
-# 9w0BAQsFADBfMRMwEQYKCZImiZPyLGQBGRYDYml6MRcwFQYKCZImiZPyLGQBGRYH
-# a29ua29yZDEWMBQGCgmSJomT8ixkARkWBm9mZmljZTEXMBUGA1UEAxMOb2ZmaWNl
-# LVI3MjAtQ0EwHhcNMjUwOTA4MDkwMjU2WhcNMjYwOTA4MDkwMjU2WjCBgjETMBEG
-# CgmSJomT8ixkARkWA2JpejEXMBUGCgmSJomT8ixkARkWB2tvbmtvcmQxFjAUBgoJ
-# kiaJk/IsZAEZFgZvZmZpY2UxDDAKBgNVBAsTA0FETTEsMCoGA1UEAwwj0JDQvdC0
-# 0YDRltC5INCu0YDRltC50L7QstC40YcgKEFETSkwggEiMA0GCSqGSIb3DQEBAQUA
-# A4IBDwAwggEKAoIBAQCoAzLpVTmagvdCRJmBY7K2QABWT+0p+9KlXDZjKZwRKO+E
-# UI6yok9dIMwCwMLWchS/tLYH3UJzdeQpThzKh9+4bUugRpcVrDBZmkc/AfCMNoW8
-# DsYULz1PSY4QFqZ2EHTtpL97CW9lq1QATAqWaxR/XeFlGh0PfNURoESp/nS0rJVD
-# mwOnws4ck6IwFDCiRf5Q6ByBT4kbUidJY2yq+XXKRB3ZvZo3qMSH25afRJjLCe8j
-# u9fCXp9tPH4Asy/m5TI2byt+/QZi4ZoqfuKg8X4qTXDpZU0t/RSVsBDmT+z3yna0
-# pVaWt7g4IypOb7Czoq5pyQGMhSp8v/N7s1kK0jX1AgMBAAGjggKzMIICrzAlBgkr
-# BgEEAYI3FAIEGB4WAEMAbwBkAGUAUwBpAGcAbgBpAG4AZzATBgNVHSUEDDAKBggr
-# BgEFBQcDAzAOBgNVHQ8BAf8EBAMCB4AwHQYDVR0OBBYEFJa2oHB+hpagFmYAV/CX
-# kJ6pRVgkMB8GA1UdIwQYMBaAFMKXhnBVVeG2Z57kEq/GVt+xtHvNMIHWBgNVHR8E
-# gc4wgcswgciggcWggcKGgb9sZGFwOi8vL0NOPW9mZmljZS1SNzIwLUNBKDQpLENO
-# PXI3MjAsQ049Q0RQLENOPVB1YmxpYyUyMEtleSUyMFNlcnZpY2VzLENOPVNlcnZp
-# Y2VzLENOPUNvbmZpZ3VyYXRpb24sREM9b2ZmaWNlLERDPWtvbmtvcmQsREM9Yml6
-# P2NlcnRpZmljYXRlUmV2b2NhdGlvbkxpc3Q/YmFzZT9vYmplY3RDbGFzcz1jUkxE
-# aXN0cmlidXRpb25Qb2ludDCBygYIKwYBBQUHAQEEgb0wgbowgbcGCCsGAQUFBzAC
-# hoGqbGRhcDovLy9DTj1vZmZpY2UtUjcyMC1DQSxDTj1BSUEsQ049UHVibGljJTIw
-# S2V5JTIwU2VydmljZXMsQ049U2VydmljZXMsQ049Q29uZmlndXJhdGlvbixEQz1v
-# ZmZpY2UsREM9a29ua29yZCxEQz1iaXo/Y0FDZXJ0aWZpY2F0ZT9iYXNlP29iamVj
-# dENsYXNzPWNlcnRpZmljYXRpb25BdXRob3JpdHkwKgYDVR0RBCMwIaAfBgorBgEE
-# AYI3FAIDoBEMD2F5c0Brb25rb3JkLmJpejBPBgkrBgEEAYI3GQIEQjBAoD4GCisG
-# AQQBgjcZAgGgMAQuUy0xLTUtMjEtMjc5NTcwNjM3Ni0yMTE4MTg1MzA1LTMxMjA1
-# NjYwNjMtMzI4ODANBgkqhkiG9w0BAQsFAAOCAQEAQj+PmmWBVDKjP334TvudZsor
-# LXQ4b2EvHe1r7korzNQ+L4KzBcqt6UiVciHlmhOdjd3yGDF1Z88nWedGkvMpf9jm
-# e5cW0c4ruiVAn6BkDrpnnaZpUs7vOorqdSvjBR//TWBR0bylNKtyAz3f5otR6Gk/
-# ZBDrrtUD60SzieLuSaxnuxnL3IAyB2UQyg/E/WpUBR7CvunWpyGnlIKuobiqiLg5
-# 3ya1EFO86s0M5ZHCRIDz9p2QzUlgHpunOEMfr32cdQIIbWdwlNiio8fGL/Q2XoJ3
-# q8YJeASm1adDuqgDYPnEXP6zLyeyu7S2xAcxqSD2U30SxdcTGE3THX3lBnTfLTGC
-# AhcwggITAgEBMHYwXzETMBEGCgmSJomT8ixkARkWA2JpejEXMBUGCgmSJomT8ixk
-# ARkWB2tvbmtvcmQxFjAUBgoJkiaJk/IsZAEZFgZvZmZpY2UxFzAVBgNVBAMTDm9m
-# ZmljZS1SNzIwLUNBAhMTAAAA6goWlOucNzC0AAQAAADqMAkGBSsOAwIaBQCgeDAY
-# BgorBgEEAYI3AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3
-# AgEEMBwGCisGAQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEW
-# BBSMiKlbWcwj5GQDaTV/fzPxXrtd5zANBgkqhkiG9w0BAQEFAASCAQCbe5SpkA2X
-# bptf4VRDR7MFwwQ7K5pEPycfSFTYUjBIewZwNXJFSwPomOB0Vecdz0Wz6VCEQ+q0
-# 1QUKMZoYxOlsP5y0hebfgGrfAFzUkF771mc2P2GxMnA3LASqZgDkLmBrdlIluark
-# AyVUxzMJltA6qAFRpE78H5CGhTc7eSnQSQNPFS1K0rvru81b1MPmpKpaUcH3lfpk
-# +vazodqOMUdmJqyNe2zUp31A4Yzb56IuNrjnroJhZSGEHXC+O9gEVm7s0j+O4vge
-# F94xLnaefd4IjttkqTR7xdssvKIDN98A2k3rxKkISwH10lldkdVH0OPk+fSkqipb
-# Uz5KDxTSnexG
-# SIG # End signature block
